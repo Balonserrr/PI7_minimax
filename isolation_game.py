@@ -138,10 +138,11 @@ class IsolationGameAI(IsolationGame): # klasse met alle AI gebeuren
                         self.player_positions = original_positions.copy()  
             return best_score
 
-    def evaluate(self): #deze functie geeft een waarde aan de huidige staat van het bord. positief is goed voor speler 2, negatief is goed voor speler 1. denk aan schaken
+    # heuristiek - hoe minder zetten mijn tegenstander heeft, hoe groter mijn voordeel
+    def evaluate(self): #positief is goed voor speler 2 (AI), negatief is goed voor speler 1 (mens). denk aan schaken
         player_1_moves = self.get_available_moves(self.player_positions[0])
         player_2_moves = self.get_available_moves(self.player_positions[1])
-        return len(player_2_moves) - len(player_1_moves)
+        return len(player_2_moves) - len(player_1_moves) # init bladwaarden (bv 6-4= +2)
 
     def get_available_moves(self, player_position):
         moves = []
