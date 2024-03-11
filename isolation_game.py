@@ -113,7 +113,7 @@ class IsolationGameAI(IsolationGame): # klasse met alle AI gebeuren
         original_board = self.board.copy()  # kopie van het bord
         original_positions = self.player_positions.copy()  # kopie van de posities van de spelers
 
-        if is_maximizing: 
+        if is_maximizing: # globaal maximaliseert deze if else de score voor AI en minimaliseert die voor tegenstander om de best move te vinden
             best_score = -math.inf
             for x in range(6): # deze for loop probeert de minimax score van een bepaalde zet te vinden
                 for y in range(6):
