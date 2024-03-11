@@ -73,7 +73,7 @@ class IsolationGame:
 class IsolationGameAI(IsolationGame): # klasse met alle AI gebeuren
     def __init__(self):
         super().__init__() # roept de constructor van de parent klasse aan (IsolationGame)
-        self.max_depth = 3  # depth. bij 4 gaat het lang duren (zelfs op mijn pc die eigenlijk best goed is) en lager dan 2 dan is hij dom. met AB pruning wordt sneller miss
+        self.max_depth = 4  # depth. bij 4 gaat het lang duren (zelfs op mijn pc die eigenlijk best goed is) en lager dan 2 dan is hij dom. met AB pruning wordt sneller miss
         
 
     def move(self, new_x, new_y): # als speler 2 is, dan speelt AI
@@ -90,7 +90,7 @@ class IsolationGameAI(IsolationGame): # klasse met alle AI gebeuren
                     self.board[current_position] = 'X'
                     self.board[x, y] = '2'
                     self.player_positions[self.player - 1] = (x, y)
-                    score = self.minimax(0, False)
+                    score = self.alpha_beta_pruning(0, -math.inf, math.inf, True)
                     self.board[x, y] = ' '
                     self.board[current_position] = '2'
                     self.player_positions[self.player - 1] = current_position
@@ -108,7 +108,7 @@ class IsolationGameAI(IsolationGame): # klasse met alle AI gebeuren
 
     def minimax(self, depth, is_maximizing): # minimax algoritme methode
         if depth == self.max_depth or self.terminal_state(self.player_positions[self.player - 1]):
-            return self.evaluate()
+            return self.MM1()
 
         original_board = self.board.copy()  # kopie van het bord
         original_positions = self.player_positions.copy()  # kopie van de posities van de spelers
@@ -137,12 +137,73 @@ class IsolationGameAI(IsolationGame): # klasse met alle AI gebeuren
                         self.board = original_board.copy() 
                         self.player_positions = original_positions.copy()  
             return best_score
+        
+
+    def alpha_beta_pruning(self, depth, alpha, beta, is_maximizing):
+        if depth == self.max_depth or self.terminal_state(self.player_positions[self.player - 1]):
+            return self.MM2() # returnt de score van de huidige positie 
+
+        original_board = self.board.copy() # kopie van het bord
+        original_positions = self.player_positions.copy() # kopie van de posities van de spelers 
+
+        if is_maximizing: 
+            max_eval = -math.inf 
+            for x in range(6): 
+                for y in range(6):
+                    if self.is_move_valid(*self.player_positions[self.player - 1], x, y):
+                        self.board[self.player_positions[self.player - 1]] = 'X'
+                        self.board[x, y] = '2'
+                        self.player_positions[self.player - 1] = (x, y)
+                        eval = self.alpha_beta_pruning(depth + 1, alpha, beta, False)
+                        self.board = original_board.copy()
+                        self.player_positions = original_positions.copy()
+                        max_eval = max(max_eval, eval)
+                        alpha = max(alpha, eval)
+                        if beta <= alpha:
+                            break
+                if beta <= alpha:
+                    break
+            return max_eval
+        else:
+            min_eval = math.inf
+            for x in range(6):
+                for y in range(6):
+                    if self.is_move_valid(*self.player_positions[1 - self.player], x, y):
+                        self.board[self.player_positions[1 - self.player]] = 'X'
+                        self.board[x, y] = '1'
+                        self.player_positions[1 - self.player] = (x, y)
+                        eval = self.alpha_beta_pruning(depth + 1, alpha, beta, True)
+                        self.board = original_board.copy()
+                        self.player_positions = original_positions.copy()
+                        min_eval = min(min_eval, eval)
+                        beta = min(beta, eval)
+                        if beta <= alpha:
+                            break
+                if beta <= alpha:
+                    break
+            return min_eval
+
 
     # heuristiek - hoe minder zetten mijn tegenstander heeft, hoe groter mijn voordeel
-    def evaluate(self): #positief is goed voor speler 2 (AI), negatief is goed voor speler 1 (mens). denk aan schaken
+    def MM1(self): #positief is goed voor speler 2 (AI), negatief is goed voor speler 1 (mens). denk aan schaken
         player_1_moves = self.get_available_moves(self.player_positions[0])
         player_2_moves = self.get_available_moves(self.player_positions[1])
         return len(player_2_moves) - len(player_1_moves) # init bladwaarden (bv 6-4= +2)
+    
+    def MM2(self):
+        opponent_position = self.player_positions[0]
+        player_2_moves = self.get_available_moves(self.player_positions[1])
+        max_distance = -1
+
+        for move in player_2_moves:
+            dx = move[0] - opponent_position[0]
+            dy = move[1] - opponent_position[1]
+            distance = (dx ** 2 + dy ** 2) ** 0.5  # Euclidische afstand
+            if distance > max_distance:
+                max_distance = distance
+
+        return max_distance
+
 
     def get_available_moves(self, player_position):
         moves = []
@@ -164,8 +225,8 @@ class IsolationGamePygame:
         self.cell_size = 100
         self.running = True
 
-        self.black_queen = pygame.image.load("PI7-main\\img\\black_queen.png")
-        self.white_queen = pygame.image.load("PI7-main\\img\\white_queen.png")
+        self.black_queen = pygame.image.load("img\\black_queen.png")
+        self.white_queen = pygame.image.load("img\\white_queen.png")
 
     def draw_board(self):
         queen_size = int(self.cell_size * 0.6)  # 
@@ -201,7 +262,7 @@ class IsolationGamePygame:
                     # Bepaal de cel waarin geklikt is
                     x, y = event.pos
                     grid_y, grid_x = x // self.cell_size, y // self.cell_size # Draai x en y om
-
+                    
                     if self.game.player == 1:  # splr 1 is menselijke speler
                         if self.game.is_move_valid(*self.game.player_positions[self.game.player - 1], grid_x, grid_y):
                             self.game.move(grid_x, grid_y)
@@ -209,7 +270,7 @@ class IsolationGamePygame:
                                 self.ai_move()  # call de zet van de AI na de zet van de speler
                         else:
                             print("Invalid move")
-
+                    
 
             self.screen.fill(pygame.Color('black'))
             self.draw_board()
