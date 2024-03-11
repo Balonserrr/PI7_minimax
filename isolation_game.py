@@ -84,7 +84,7 @@ class IsolationGameAI(IsolationGame): # klasse met alle AI gebeuren
         best_move = None 
         current_position = self.player_positions[self.player - 1]
 
-        for x in range(6): # deze for loop probeert de beste zet te vinden voor de AI
+        for x in range(6): # simuleert elke mogelijke zet, roept minimax aan om score te berekenen  en houdt het bij
             for y in range(6):
                 if self.is_move_valid(*current_position, x, y):
                     self.board[current_position] = 'X'
