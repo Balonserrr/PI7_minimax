@@ -77,8 +77,10 @@ class IsolationGameAI(IsolationGame): # klasse met alle AI gebeuren
         
 
     def move(self, new_x, new_y): # als speler 2 is, dan speelt AI
-        if self.player != 2: 
-            return super().move(new_x, new_y)
+        use_mm1 = False
+        if self.player == 1: 
+            use_mm1 = True 
+
 
         best_score = -math.inf 
         best_move = None 
@@ -90,7 +92,7 @@ class IsolationGameAI(IsolationGame): # klasse met alle AI gebeuren
                     self.board[current_position] = 'X'
                     self.board[x, y] = '2'
                     self.player_positions[self.player - 1] = (x, y)
-                    score = self.alpha_beta_pruning(0, -math.inf, math.inf, True)
+                    score = self.alpha_beta_pruning(0, -math.inf, math.inf, True, use_mm1)
                     self.board[x, y] = ' '
                     self.board[current_position] = '2'
                     self.player_positions[self.player - 1] = current_position
@@ -139,22 +141,24 @@ class IsolationGameAI(IsolationGame): # klasse met alle AI gebeuren
             return best_score
         
 
-    def alpha_beta_pruning(self, depth, alpha, beta, is_maximizing):
+    def alpha_beta_pruning(self, depth, alpha, beta, is_maximizing, use_mm1):
         if depth == self.max_depth or self.terminal_state(self.player_positions[self.player - 1]):
-            return self.MM2() # returnt de score van de huidige positie 
+            # Kies de heuristiek op basis van de use_mm1 flag
+            return self.MM1() if use_mm1 else self.MM2()
 
-        original_board = self.board.copy() # kopie van het bord
-        original_positions = self.player_positions.copy() # kopie van de posities van de spelers 
+        original_board = self.board.copy()
+        original_positions = self.player_positions.copy()
 
-        if is_maximizing: 
-            max_eval = -math.inf 
-            for x in range(6): 
+        if is_maximizing:
+            max_eval = -math.inf
+            for x in range(6):
                 for y in range(6):
                     if self.is_move_valid(*self.player_positions[self.player - 1], x, y):
                         self.board[self.player_positions[self.player - 1]] = 'X'
                         self.board[x, y] = '2'
                         self.player_positions[self.player - 1] = (x, y)
-                        eval = self.alpha_beta_pruning(depth + 1, alpha, beta, False)
+                        # Voeg de use_mm1 flag toe aan de recursieve aanroep
+                        eval = self.alpha_beta_pruning(depth + 1, alpha, beta, False, use_mm1)
                         self.board = original_board.copy()
                         self.player_positions = original_positions.copy()
                         max_eval = max(max_eval, eval)
@@ -172,7 +176,8 @@ class IsolationGameAI(IsolationGame): # klasse met alle AI gebeuren
                         self.board[self.player_positions[1 - self.player]] = 'X'
                         self.board[x, y] = '1'
                         self.player_positions[1 - self.player] = (x, y)
-                        eval = self.alpha_beta_pruning(depth + 1, alpha, beta, True)
+                        # Voeg de use_mm1 flag toe aan de recursieve aanroep
+                        eval = self.alpha_beta_pruning(depth + 1, alpha, beta, True, use_mm1)
                         self.board = original_board.copy()
                         self.player_positions = original_positions.copy()
                         min_eval = min(min_eval, eval)
@@ -250,6 +255,33 @@ class IsolationGamePygame:
 
     def run(self):
         while self.running:
+            if not self.game.game_over:
+                if self.game.player == 1:  
+                    self.ai_move()  # AI doet een zet
+                else:
+                    self.ai_move() # AI doet een zet 
+                
+                if self.game.terminal_state(self.game.player_positions[self.game.player - 1]):
+                    self.game.game_over = True
+                    self.show_game_over_message(3 - self.game.player)
+                    pygame.time.wait(5000)  # Wacht 5 seconden
+                    self.running = False
+            else:
+                # Het spel is voorbij, stop de loop
+                self.running = False
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.running = False
+
+            self.screen.fill(pygame.Color('black'))
+            self.draw_board()
+            pygame.display.flip()
+            self.clock.tick(60)
+
+        pygame.quit()
+
+        '''
             for event in pygame.event.get():
                 if self.game.game_over:
                     self.show_game_over_message(3 - self.game.player) # Toon bericht met de winnaar
@@ -258,10 +290,13 @@ class IsolationGamePygame:
 
                 if event.type == pygame.QUIT:
                     self.running = False
+                
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     # Bepaal de cel waarin geklikt is
+                    
                     x, y = event.pos
                     grid_y, grid_x = x // self.cell_size, y // self.cell_size # Draai x en y om
+
                     
                     if self.game.player == 1:  # splr 1 is menselijke speler
                         if self.game.is_move_valid(*self.game.player_positions[self.game.player - 1], grid_x, grid_y):
@@ -270,6 +305,9 @@ class IsolationGamePygame:
                                 self.ai_move()  # call de zet van de AI na de zet van de speler
                         else:
                             print("Invalid move")
+
+                    
+
                     
 
             self.screen.fill(pygame.Color('black'))
@@ -278,6 +316,8 @@ class IsolationGamePygame:
             self.clock.tick(60)
 
         pygame.quit()
+
+        '''
 
     def ai_move(self):
         self.game.move(None, None)  # AI doet een zet
